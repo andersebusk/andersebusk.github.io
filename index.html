@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oil savings calculator</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 2mm;
+        }
+        #oilForm {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 1px;
+            margin-bottom: 7px;
+        }
+        #oilForm input {
+            margin-bottom: 3px;
+        }
+        .result-fields {
+            margin-top: 10mm;
+            gap: 5px;
+            width: 250px;
+        }
+        .result-fields input {
+            width: calc(100% - 10px);
+        }
+    </style>
+</head>
+<body>
+    <h1>Oil savings</h1>
+    <form id="oilForm">
+        <label for="Vessel_name">Vessel name:</label>
+        <input type="text" id="Vessel_name" name="Vessel_name"><br>
+        <label for="Requested_BN">Requested BN value:</label>
+        <input type="text" id="Requested_BN" name="Requested_BN"><br>
+        <label for="AUX_oil_replace">AUX oil to replace ME system oil (%):</label>
+        <input type="text" id="AUX_oil_replace" name="AUX_oil_replace"><br>
+        <label for="High_BN_oil">High BN oil value:</label>
+        <input type="text" id="High_BN_oil" name="High_BN_oil"><br>
+        <label for="Density_high">Density of the high BN oil (kG/m^3):</label>
+        <input type="text" id="Density_high" name="Density_high"><br>
+        <label for="Price_high">Price of the high BN oil (USD):</label>
+        <input type="text" id="Price_high" name="Price_high"><br>
+        <label for="ME_system_oil_BN">ME system oil BN:</label>
+        <input type="text" id="ME_system_oil_BN" name="ME_system_oil_BN"><br>
+        <label for="Density_ME">Density of the ME oil (kG/m^3):</label>
+        <input type="text" id="Density_ME" name="Density_ME"><br>
+        <label for="Price_ME">Price of the ME oil (USD):</label>
+        <input type="text" id="Price_ME" name="Price_ME"><br>
+        <label for="ME_power">ME power (kW):</label>
+        <input type="text" id="ME_power" name="ME_power"><br>
+        <label for="Days_sailing">Annual days sailing:</label>
+        <input type="text" id="Days_sailing" name="Days_sailing"><br>
+        <label for="Feedrate_without">Feedrate without BOB (L/hr):</label>
+        <input type="text" id="Feedrate_without" name="Feedrate_without"><br>
+        <label for="Feedrate_BOB">Feedrate with BOB (L/hr):</label>
+        <input type="text" id="Feedrate_BOB" name="Feedrate_BOB"><br>
+        <label for="Price_oil_L">Price of commercial oil (USD):</label>
+        <input type="text" id="Price_oil_L" name="Price_oil_L"><br>
+
+            <button type="button" id="calculateButton">Calculate Savings</button>
+        </form>
+
+        <div id="results" class="result-fields">
+            <label for="Savings_USD">Savings (USD):</label>
+            <input type="text" id="Savings_USD" readonly><br>
+            <label for="Savings_L">Savings (L):</label>
+            <input type="text" id="Savings_L" readonly><br>
+            <label for="Savings_CO2_ton">Savings (CO2 tons):</label>
+            <input type="text" id="Savings_CO2_ton" readonly><br>
+        </div>
+        
+        <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.16.0/dist/pdf-lib.js"></script>
+
+        <script>
+            document.getElementById('calculateButton').addEventListener('click', function() {
+                var requestedBN = parseFloat(document.getElementById('Requested_BN').value);
+                var auxOilReplace = parseFloat(document.getElementById('AUX_oil_replace').value);
+                var highBNOil = parseFloat(document.getElementById('High_BN_oil').value);
+                var densityHigh = parseFloat(document.getElementById('Density_high').value);
+                var priceHigh = parseFloat(document.getElementById('Price_high').value);
+                var meSystemOilBN = parseFloat(document.getElementById('ME_system_oil_BN').value);
+                var densityME = parseFloat(document.getElementById('Density_ME').value);
+                var priceME = parseFloat(document.getElementById('Price_ME').value);
+                var mePower = parseFloat(document.getElementById('ME_power').value);
+                var daysSailing = parseFloat(document.getElementById('Days_sailing').value);
+                var feedrateWithout = parseFloat(document.getElementById('Feedrate_without').value);
+                var feedrateBOB = parseFloat(document.getElementById('Feedrate_BOB').value);
+                var priceOilL = parseFloat(document.getElementById('Price_oil_L').value);
+
+                // Performing calculations
+                var result = olie_besparelser(requestedBN, auxOilReplace, highBNOil, densityHigh, priceHigh, meSystemOilBN, densityME, priceME, mePower, daysSailing, feedrateWithout, feedrateBOB, priceOilL);
+
+                document.getElementById('Savings_USD').value = result.Savings_USD.toFixed(2);
+                document.getElementById('Savings_L').value = result.Savings_L.toFixed(2);
+                document.getElementById('Savings_CO2_ton').value = result.Savings_C02_ton.toFixed(2);
+                //document.getElementById('Savings_USD_percent').value = result.Savings_USD_percent.toFixed(2);
+                //document.getElementById('Savings_L_percent').value = result.Savings_L_percent.toFixed(2);
+                //document.getElementById('Savings_CO2_ton_percent').value = result.Savings_CO2_ton_percent.toFixed(2);
+
+                
+                // Generate PDF
+                (async function() {
+                    const pdfDoc = await PDFLib.PDFDocument.create();
+                    const page = pdfDoc.addPage();
+                    const content = `Vessel name: ${document.getElementById('Vessel_name').value}\n`
+                                    + `Savings (USD): ${document.getElementById('Savings_USD').value}\n`
+                                    //+ `Savings (USD) percentage: ${document.getElementById('Savings_USD_percent').value}\n`
+                                    + `Savings (L): ${document.getElementById('Savings_L').value}\n`
+                                    //+ `Savings (L) percentage: ${document.getElementById('Savings_L_percent').value}\n`
+                                    + `Savings (CO2 tons): ${document.getElementById('Savings_CO2_ton').value}\n`
+                                    //+ `Savings (CO2 tons) percentage: ${document.getElementById('Savings_CO2_ton_percent').value}`;
+                    page.drawText(content, { x: 50, y: 500 });
+
+                    // Download PDF
+                    const vesselName = document.getElementById('Vessel_name').value;
+                    const currentDate = new Date().toISOString().slice(0, 10);
+                    const pdfBytes = await pdfDoc.save();
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = `${vesselName}_${currentDate}_savings_report.pdf`;
+                    link.click();
+                })();
+            });
+                
+
+
+        
+        function olie_besparelser(Requested_BN, Aux_oil_replace,High_BN_oil,Density_high,Price_high,ME_system_oil_BN,Density_ME,Price_ME,ME_power,Days_sailing,Feedrate_without,Feedrate_BOB,Price_oil_L) {
+            var variabel=99;
+            // Blended oils
+            var Used_Aux_engine_oil_BN=20;
+            var Used_Aux_engine_oil_density=0.91;
+            var Used_Aux_engine_oil_price=0;
+
+            // Main engine Oil
+            var Oil_ME_kg=(variabel*(Requested_BN-High_BN_oil))/(ME_system_oil_BN+((Aux_oil_replace*Used_Aux_engine_oil_BN-Aux_oil_replace*High_BN_oil)/(1-Aux_oil_replace))-High_BN_oil);
+            
+            var Oil_ME_L=Oil_ME_kg/Density_ME;
+            
+            var Oil_ME_price=Oil_ME_L*Price_ME;
+           
+            // Aux engine oil
+            var Oil_AUX_kg=(Oil_ME_kg*Aux_oil_replace)/(1-Aux_oil_replace);
+            
+            var Oil_AUX_L=Oil_AUX_kg/Used_Aux_engine_oil_density;
+            
+            var Oil_AUX_price=Oil_AUX_L*Used_Aux_engine_oil_price;
+            
+            // High BN oil
+            var Oil_High_kg=(((Oil_ME_kg+Oil_AUX_kg)*Requested_BN-(Oil_ME_kg*ME_system_oil_BN+Oil_AUX_kg*Used_Aux_engine_oil_BN))/(High_BN_oil*(1-(Requested_BN/High_BN_oil))));
+            
+            var Oil_High_L=Oil_High_kg/Density_high;
+            
+            var Oil_high_price=Oil_High_L*Price_high;
+            
+            // Blended oil sum
+            var Blended_oil_kg_sum=Oil_ME_kg+Oil_AUX_kg+Oil_High_kg;
+            var Blended_oil_L_sum=Oil_ME_L+Oil_AUX_L+Oil_High_L;
+            var Blended_oil_price_sum=Oil_ME_price+Oil_AUX_price+Oil_high_price;
+            
+            // Blended oil volume
+            var Oil_ME_volume=Oil_ME_L/Blended_oil_L_sum;
+            var Oil_AUX_volume=Oil_AUX_L/Blended_oil_L_sum;
+            var Oil_High_volume=Oil_High_L/Blended_oil_L_sum;
+            
+            var Load=0.6;
+
+            // Annual cylinder oil savings with the lower cost BOB oil and optimized feedrate
+            var kWh_annual=ME_power*Load*Days_sailing*24;
+
+            var annual_consumption_ltr_without=kWh_annual*Feedrate_without*0.001/0.95;
+            var annual_consumption_ltr_BOB=kWh_annual*Feedrate_BOB*0.001/0.95;
+
+            var Price_oil_L_BOB=Blended_oil_price_sum/Blended_oil_L_sum;
+
+            var SUM_without=annual_consumption_ltr_without*Price_oil_L;
+            var SUM_BOB=annual_consumption_ltr_BOB*Price_oil_L_BOB;
+            
+
+            // Anuual savings
+            var Savings_USD=SUM_without-SUM_BOB;
+            var Savings_USD_percent=Savings_USD/SUM_without*100;
+            var Savings_L=annual_consumption_ltr_without-annual_consumption_ltr_BOB;
+            var Savings_L_percent=Savings_L/annual_consumption_ltr_without*100;
+            var Savings_CO2_ton=3/1000*Savings_L;
+            var Savings_CO2_ton_percent=3/1000*Savings_L/(3/1000*annual_consumption_ltr_without)*100;
+
+            return {'Savings_USD':Savings_USD, 'Savings_L':Savings_L, 'Savings_C02_ton':Savings_CO2_ton};
+        }
+    </script>
+</body>
+</html>
